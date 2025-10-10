@@ -1,0 +1,142 @@
+[
+  {
+    "number": 1,
+    "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+    "numberInSurah": 1,
+    "juz": 1,
+    "surah": {
+      "number": 1,
+      "name": "الفاتحة",
+      "englishName": "Al-Fatihah",
+      "numberOfAyahs": 7
+    },
+    "translation": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+    "themes": ["tawheed", "gratitude"]
+  },
+  {
+    "number": 163,
+    "text": "وَإِلَٰهُكُمْ إِلَٰهٌ وَاحِدٌ ۖ لَّا إِلَٰهَ إِلَّا هُوَ الرَّحْمَٰنُ الرَّحِيمُ",
+    "numberInSurah": 163,
+    "juz": 2,
+    "surah": {
+      "number": 2,
+      "name": "البقرة",
+      "englishName": "Al-Baqarah",
+      "numberOfAyahs": 286
+    },
+    "translation": "And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful.",
+    "themes": ["tawheed"]
+  },
+  {
+    "number": 255,
+    "text": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ",
+    "numberInSurah": 255,
+    "juz": 3,
+    "surah": {
+      "number": 2,
+      "name": "البقرة",
+      "englishName": "Al-Baqarah",
+      "numberOfAyahs": 286
+    },
+    "translation": "Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth.",
+    "themes": ["tawheed"]
+  },
+  {
+    "number": 153,
+    "text": "يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ",
+    "numberInSurah": 153,
+    "juz": 2,
+    "surah": {
+      "number": 2,
+      "name": "البقرة",
+      "englishName": "Al-Baqarah",
+      "numberOfAyahs": 286
+    },
+    "translation": "O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.",
+    "themes": ["patience", "salah"]
+  },
+  {
+    "number": 183,
+    "text": "يَا أَيُّهَا الَّذِينَ آمَنُوا كُتِبَ عَلَيْكُمُ الصِّيَامُ كَمَا كُتِبَ عَلَى الَّذِينَ مِن قَبْلِكُمْ لَعَلَّكُمْ تَتَّقُونَ",
+    "numberInSurah": 183,
+    "juz": 2,
+    "surah": {
+      "number": 2,
+      "name": "البقرة",
+      "englishName": "Al-Baqarah",
+      "numberOfAyahs": 286
+    },
+    "translation": "O you who have believed, decreed upon you is fasting as it was decreed upon those before you that you may become righteous.",
+    "themes": ["ramadan"]
+  },
+  {
+    "number": 152,
+    "text": "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+    "numberInSurah": 152,
+    "juz": 2,
+    "surah": {
+      "number": 2,
+      "name": "البقرة",
+      "englishName": "Al-Baqarah",
+      "numberOfAyahs": 286
+    },
+    "translation": "So remember Me; I will remember you. And be grateful to Me and do not deny Me.",
+    "themes": ["gratitude"]
+  },
+  {
+    "number": 30,
+    "text": "قُلْ إِنَّمَا أَنَا بَشَرٌ مِّثْلُكُمْ يُوحَىٰ إِلَيَّ أَنَّمَا إِلَٰهُكُمْ إِلَٰهٌ وَاحِدٌ ۖ فَمَن كَانَ يَرْجُو لِقَاءَ رَبِّهِ فَلْيَعْمَلْ عَمَلًا صَالِحًا",
+    "numberInSurah": 110,
+    "juz": 16,
+    "surah": {
+      "number": 18,
+      "name": "الكهف",
+      "englishName": "Al-Kahf",
+      "numberOfAyahs": 110
+    },
+    "translation": "Say, 'I am only a man like you, to whom has been revealed that your god is one God. So whoever would hope for the meeting with his Lord - let him do righteous work and not associate in the worship of his Lord anyone.'",
+    "themes": ["tawheed", "character"]
+  },
+  {
+    "number": 18,
+    "text": "شَهِدَ اللَّهُ أَنَّهُ لَا إِلَٰهَ إِلَّا هُوَ وَالْمَلَائِكَةُ وَأُولُو الْعِلْمِ قَائِمًا بِالْقِسْطِ",
+    "numberInSurah": 18,
+    "juz": 3,
+    "surah": {
+      "number": 3,
+      "name": "آل عمران",
+      "englishName": "Ali 'Imran",
+      "numberOfAyahs": 200
+    },
+    "translation": "Allah witnesses that there is no deity except Him, and [so do] the angels and those of knowledge - [that He is] maintaining [creation] in justice. There is no deity except Him, the Exalted in Might, the Wise.",
+    "themes": ["tawheed", "knowledge"]
+  },
+  {
+    "number": 134,
+    "text": "الَّذِينَ يُنفِقُونَ فِي السَّرَّاءِ وَالضَّرَّاءِ وَالْكَاظِمِينَ الْغَيْظَ وَالْعَافِينَ عَنِ النَّاسِ ۗ وَاللَّهُ يُحِبُّ الْمُحْسِنِينَ",
+    "numberInSurah": 134,
+    "juz": 4,
+    "surah": {
+      "number": 3,
+      "name": "آل عمران",
+      "englishName": "Ali 'Imran",
+      "numberOfAyahs": 200
+    },
+    "translation": "Who spend [in the cause of Allah] during ease and hardship and who restrain anger and who pardon the people - and Allah loves the doers of good.",
+    "themes": ["character", "forgiveness"]
+  },
+  {
+    "number": 21,
+    "text": "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً",
+    "numberInSurah": 21,
+    "juz": 21,
+    "surah": {
+      "number": 30,
+      "name": "الروم",
+      "englishName": "Ar-Rum",
+      "numberOfAyahs": 60
+    },
+    "translation": "And of His signs is that He created for you from yourselves mates that you may find tranquility in them; and He placed between you affection and mercy. Indeed in that are signs for a people who give thought.",
+    "themes": ["family"]
+  }
+]
