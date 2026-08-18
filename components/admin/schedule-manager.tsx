@@ -7,8 +7,8 @@ import { sdk } from "@/lib/sdk"
 import { SocialMediaManager } from "@/lib/social-media"
 
 export default function ScheduleManager() {
-  const [schedules, setSchedules] = useState([])
-  const [posts, setPosts] = useState([])
+  const [schedules, setSchedules] = useState<any[]>([])
+  const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function ScheduleManager() {
       await sdk.update("schedules", scheduleId, {
         status: "failed",
         lastAttempt: new Date().toISOString(),
-        errors: [error.message],
+        errors: [(error as Error).message],
       })
     }
   }

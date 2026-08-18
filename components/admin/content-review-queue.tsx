@@ -275,7 +275,7 @@ function ContentCard({
                         <div className="mt-2">
                           <p className="text-xs font-semibold">Sources checked:</p>
                           <ul className="text-xs list-disc list-inside">
-                            {log.sources.map((src, j) => (
+                            {log.sources.map((src: string, j: number) => (
                               <li key={j}>{src}</li>
                             ))}
                           </ul>

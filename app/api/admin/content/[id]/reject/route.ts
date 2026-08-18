@@ -8,19 +8,20 @@ export const dynamic = "force-dynamic"
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await ctx.params
   const ip = getClientIp(request)
   const claims = getClaimsFromRequest(request)
   const userId = claims?.sub || "admin"
   try {
     const { reason } = await request.json().catch(() => ({}))
     const rejectionReason = reason || "No reason provided"
-    await rejectContent(params.id, rejectionReason)
+    await rejectContent(id, rejectionReason)
     await writeAuditLog({
       action: "admin.content_reject",
       userId,
-      data: { contentId: params.id, reason: rejectionReason },
+      data: { contentId: id, reason: rejectionReason },
       ip,
     })
     return NextResponse.json({ success: true })
