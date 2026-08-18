@@ -127,20 +127,20 @@ Astaghfirullaaha wa atoobu ilayh.
 BaarokaLLAHU Fee. Bi'idniLlah.
    ```
 
-8. **Build before commit.** Before every commit, run the build/lint to
+7. **Build before commit.** Before every commit, run the build/lint to
    ensure the last task did not introduce errors. Fix all errors before
    committing. Never commit a broken state.
 
-9. **Honest reporting.** If something cannot be verified in the browser, say
+8. **Honest reporting.** If something cannot be verified in the browser, say
    so explicitly. Do not claim success that is not earned.
 
-10. **Preserve environmental files.** The sandbox environment files
+9. **Preserve environmental files.** The sandbox environment files
     (`.zscripts/`, `Caddyfile`, the bun/npm runtime contract, port 3000 gateway)
     must not be broken. Astro dev must serve port 3000. These files are
     environment-specific and must NOT be committed to the LightMail repo (they
     are gitignored). Only `.env.example` is tracked.
 
-11. **Invocation spelling.** The Shahadah is "Ash-hadu an laa ilaaha
+10. **Invocation spelling.** The Shahadah is "Ash-hadu an laa ilaaha
     **illa-Llah** wahdaHu lasharikalaHu" — with a capital L and lowercase
     "lah". Never write "illa-Llash" or "illallash". This exact spelling MUST
     be used in every commit message, both opening and closing seals.
