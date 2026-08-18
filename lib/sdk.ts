@@ -1,4 +1,10 @@
-import UniversalSDK, { type UniversalSDKConfig } from "./universal-sdk"
+import UniversalSDK, {
+  type UniversalSDKConfig,
+  type LightbaseFieldDefinition,
+  type LightbaseIndexDefinition,
+  mapLegacyTypeToLightbase,
+} from "./universal-sdk"
+import { lightbaseClient } from "./lightbase/client"
 
 // SDK Configuration
 const sdkConfig: UniversalSDKConfig = {
@@ -284,9 +290,121 @@ const sdkConfig: UniversalSDKConfig = {
 // Initialize SDK
 export const sdk = new UniversalSDK(sdkConfig)
 
+// ============================================================
+// Lightbase collection definitions, derived from the schemas above
+// ============================================================
+
+export interface LightbaseSchemaDefinition {
+  name: string
+  fields: LightbaseFieldDefinition[]
+  indexes?: LightbaseIndexDefinition[]
+}
+
+/**
+ * Translate the existing `schemas` map (legacy GitHub-style shape:
+ * {required, types, defaults}) to Lightbase collection definitions
+ * ({name, fields, indexes}). This is the source of truth for the
+ * collection registry that ensureLightbaseCollections() uses.
+ */
+export const lightbaseSchemas: Record<string, LightbaseSchemaDefinition> = Object.fromEntries(
+  Object.entries(sdkConfig.schemas || {}).map(([name, def]) => {
+    const fields: LightbaseFieldDefinition[] = Object.entries(def.types || {}).map(
+      ([fieldName, legacyType]) => {
+        const lbType = mapLegacyTypeToLightbase(legacyType as string)
+        const field: LightbaseFieldDefinition = {
+          name: fieldName,
+          type: lbType,
+          indexed: [
+            "key",
+            "platform",
+            "postId",
+            "slug",
+            "verseReference",
+            "contentId",
+            "type",
+            "status",
+            "name",
+          ].includes(fieldName),
+        }
+        if (lbType === "array") {
+          field.of = "json"
+        }
+        if ((def.required || []).includes(fieldName)) {
+          field.required = true
+        }
+        if (def.defaults && fieldName in def.defaults) {
+          field.default = (def.defaults as Record<string, any>)[fieldName]
+        }
+        // Make user.email unique so register()/login() stay collision-safe.
+        if (name === "users" && fieldName === "email") {
+          field.unique = true
+        }
+        return field
+      },
+    )
+    const indexes: LightbaseIndexDefinition[] = []
+    if (name === "users") {
+      indexes.push({ name: "users_email_idx", fields: ["email"], unique: true })
+    }
+    if (name === "settings") {
+      indexes.push({ name: "settings_key_idx", fields: ["key"], unique: true })
+    }
+    if (name === "categories") {
+      indexes.push({ name: "categories_slug_idx", fields: ["slug"], unique: true })
+    }
+    if (name === "api-cache") {
+      indexes.push({ name: "api_cache_key_idx", fields: ["key"], unique: true })
+    }
+    if (name === "image-cache") {
+      indexes.push({ name: "image_cache_ref_idx", fields: ["verseReference"] })
+    }
+    if (name === "oauth-tokens") {
+      indexes.push({ name: "oauth_tokens_platform_idx", fields: ["platform"], unique: true })
+    }
+    return [name, { name, fields, ...(indexes.length ? { indexes } : {}) }]
+  }),
+) as Record<string, LightbaseSchemaDefinition>
+
+/**
+ * Idempotent: lists existing Lightbase collections and creates any
+ * missing ones from the lightbaseSchemas registry. Safe to call on
+ * every cold start. No-op when Lightbase is not configured.
+ */
+export async function ensureLightbaseCollections(): Promise<void> {
+  if (!lightbaseClient) {
+    return
+  }
+  let existing: string[] = []
+  try {
+    const list = await lightbaseClient.listCollections()
+    existing = list.map((c: any) => (typeof c === "string" ? c : c?.name)).filter(Boolean) as string[]
+  } catch (error) {
+    console.warn("[lightbase] could not list collections; will attempt to create on demand:", (error as Error).message)
+  }
+
+  for (const [name, def] of Object.entries(lightbaseSchemas)) {
+    if (existing.includes(name)) continue
+    try {
+      await lightbaseClient.createCollection(name, def.fields, def.indexes)
+      console.log(`[lightbase] created collection: ${name}`)
+    } catch (error) {
+      // 409 Conflict means the collection already exists; safe to ignore.
+      const msg = (error as Error).message || ""
+      if (!/conflict|already exists|409/i.test(msg)) {
+        console.warn(`[lightbase] failed to create collection ${name}:`, msg)
+      }
+    }
+  }
+}
+
 // Initialize schemas and default data
 export async function initializeDatabase() {
   try {
+    // When Lightbase is enabled, ensure all collections exist before
+    // we read/write any seed data. No-op when Lightbase is not
+    // configured (local dev / GitHub fallback).
+    await ensureLightbaseCollections()
+
     // Check if categories exist, if not create default ones
     const categories = await sdk.get("categories")
     if (categories.length === 0) {
