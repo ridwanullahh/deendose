@@ -1,50 +1,66 @@
-// Lightbase SDK client. Production-grade HTTP client for the Lightbase BaaS.
-// No external dependencies — uses fetch only.
-// Activates the moment valid credentials are supplied via env vars.
+/**
+ * Bismillah Ar-Rahman Ar-Roheem.
+ *
+ * LightbaseClient — a typed HTTP client for the Lightbase BaaS REST API.
+ *
+ * Env vars consumed (see .env.example):
+ *   LIGHTBASE_API_KEY    — required to enable Lightbase; when empty the
+ *                          caller falls back to the legacy GitHub JSON
+ *                          backend (dev only).
+ *   LIGHTBASE_BASE_URL   — e.g. http://lightbase.80.225.189.74.sslip.io
+ *   LIGHTBASE_PROJECT    — e.g. deendose | deenqa
+ *   LIGHTBASE_TENANT     — defaults to "default"
+ *
+ * The client is dependency-free (uses the platform `fetch`). It throws
+ * `LightbaseApiError` on non-2xx responses so callers can branch on
+ * `error.code` (e.g. "auth.invalid_credentials", "validation.failed",
+ * "not_found").
+ */
 
-export interface LightbaseClientConfig {
+export interface LightbaseConfig {
   baseUrl: string
   apiKey: string
   project: string
   tenant?: string
+  /** Optional fetch override (for tests). */
+  fetchImpl?: typeof fetch
 }
 
-export type LightbaseFieldType =
-  | "string"
-  | "text"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "date"
-  | "datetime"
-  | "json"
-  | "array"
-  | "uuid"
-  | "url"
-  | "email"
-  | "phone"
-  | "ip"
-  | "color"
-  | "decimal"
-  | "currency"
-  | "duration"
-  | "point"
-  | "polygon"
-  | "binary"
-  | "vector"
-  | "reference"
-
+/** Alias names kept for back-compat with universal-sdk.ts. */
 export interface LightbaseFieldDefinition {
   name: string
-  type: LightbaseFieldType
+  type:
+    | "string"
+    | "text"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "date"
+    | "datetime"
+    | "json"
+    | "array"
+    | "uuid"
+    | "url"
+    | "email"
+    | "phone"
+    | "ip"
+    | "color"
+    | "decimal"
+    | "currency"
+    | "duration"
+    | "point"
+    | "polygon"
+    | "binary"
+    | "vector"
+    | "reference"
   required?: boolean
   unique?: boolean
   indexed?: boolean
-  default?: any
+  default?: unknown
   maxLength?: number
   minimum?: number
   maximum?: number
-  enum?: any[]
+  enum?: unknown[]
   precision?: number
   currency?: string
   dimensions?: number
@@ -52,7 +68,8 @@ export interface LightbaseFieldDefinition {
   cascade?: boolean
   maxBytes?: number
   searchable?: boolean
-  of?: LightbaseFieldType
+  /** For array fields: the element type (e.g. "string", "json"). */
+  of?: string
   description?: string
 }
 
@@ -62,144 +79,59 @@ export interface LightbaseIndexDefinition {
   unique?: boolean
 }
 
-export interface LightbaseCollectionDefinition {
+export interface LightbaseCollectionSchema {
   name: string
   fields: LightbaseFieldDefinition[]
   indexes?: LightbaseIndexDefinition[]
 }
 
-export interface LightbaseFilterExpr {
-  field?: string
-  op?: string
-  value?: any
-  and?: LightbaseFilterExpr[]
-  or?: LightbaseFilterExpr[]
-}
+/** Filter expression — see Lightbase API doc §7. */
+export type LightbaseFilterExpr =
+  | { field: string; op: string; value: unknown }
+  | { and: LightbaseFilterExpr[] }
+  | { or: LightbaseFilterExpr[] }
 
-export interface LightbaseQueryParams {
+export interface LightbaseQueryOptions {
   filter?: LightbaseFilterExpr
-  sort?: string
-  limit?: number
-  cursor?: any
-  after?: string
+  sort?: string // e.g. "age:desc,name:asc"
+  limit?: number // 1..1000
+  cursor?: { limit: number; offset: number }
+  after?: string // ULID for keyset pagination
   count?: boolean
-  select?: string
+  select?: string // comma-separated fields, dot-notation supported
 }
 
-export interface LightbaseQueryResponse<T = any> {
+export interface LightbaseQueryResult<T = unknown> {
   data: T[]
-  nextCursor?: any
+  nextCursor?: { limit: number; offset: number }
   total?: number
   hasMore?: boolean
   count?: number
 }
 
-export interface LightbaseSearchResponse<T = any> {
-  data: T[]
-  total?: number
+export interface LightbaseDocument<T = Record<string, unknown>> {
+  document: T & {
+    id: string
+    _created_at: string
+    _updated_at: string
+    _revision: number
+    _deleted: boolean
+    _checksum: string
+  }
 }
 
-export interface LightbaseUpsertResponse<T = any> {
-  document: T
-  created: boolean
-}
-
-export interface LightbaseBulkResponse {
-  inserted: number
-  updated: number
-  deleted: number
-  errors: any[]
-}
-
-export interface LightbaseSeedResponse {
-  inserted: number
-  skipped: number
-  errors: any[]
-}
-
-export class LightbaseError extends Error {
-  public readonly status: number
-  public readonly code: string
-  public readonly domain: string
-  public readonly correlationId?: string
-  public readonly details?: any
-
-  constructor(message: string, opts: {
-    status: number
-    code: string
-    domain: string
-    correlationId?: string
-    details?: any
-  }) {
+export class LightbaseApiError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly status: number,
+    public readonly domain: string,
+    public readonly details?: unknown,
+    public readonly correlationId?: string,
+  ) {
     super(message)
-    this.name = "LightbaseError"
-    this.status = opts.status
-    this.code = opts.code
-    this.domain = opts.domain
-    this.correlationId = opts.correlationId
-    this.details = opts.details
+    this.name = "LightbaseApiError"
   }
-}
-
-export class LightbaseAuthError extends LightbaseError {
-  constructor(message: string, details?: any) {
-    super(message, {
-      status: 401,
-      code: "auth.invalid_credentials",
-      domain: "auth",
-      details,
-    })
-    this.name = "LightbaseAuthError"
-  }
-}
-
-export class LightbaseForbiddenError extends LightbaseError {
-  constructor(message: string, details?: any) {
-    super(message, {
-      status: 403,
-      code: "authz.forbidden",
-      domain: "authz",
-      details,
-    })
-    this.name = "LightbaseForbiddenError"
-  }
-}
-
-export class LightbaseNotFoundError extends LightbaseError {
-  constructor(message: string, details?: any) {
-    super(message, {
-      status: 404,
-      code: "not_found",
-      domain: "not_found",
-      details,
-    })
-    this.name = "LightbaseNotFoundError"
-  }
-}
-
-export class LightbaseConflictError extends LightbaseError {
-  public readonly revision?: number
-  constructor(message: string, details?: any, revision?: number) {
-    super(message, {
-      status: 409,
-      code: "storage.conflict",
-      domain: "storage",
-      details,
-    })
-    this.name = "LightbaseConflictError"
-    this.revision = revision
-  }
-}
-
-interface LightbaseErrorBody {
-  error: {
-    code: string
-    domain: string
-    message: string
-    timestamp?: string
-    details?: any
-  }
-  correlationId?: string
 }
 
 export class LightbaseClient {
@@ -207,391 +139,363 @@ export class LightbaseClient {
   private readonly apiKey: string
   private readonly project: string
   private readonly tenant: string
+  private readonly fetchImpl: typeof fetch
 
-  constructor(config: LightbaseClientConfig) {
-    if (!config.baseUrl) throw new Error("LightbaseClient: baseUrl is required")
-    if (!config.apiKey) throw new Error("LightbaseClient: apiKey is required")
-    if (!config.project) throw new Error("LightbaseClient: project is required")
-    this.baseUrl = config.baseUrl.replace(/\/+$/, "")
+  constructor(config: LightbaseConfig) {
+    this.baseUrl = config.baseUrl.replace(/\/$/, "")
     this.apiKey = config.apiKey
     this.project = config.project
-    this.tenant = config.tenant || "default"
+    this.tenant = config.tenant ?? "default"
+    this.fetchImpl = config.fetchImpl ?? fetch
   }
 
-  isConfigured(): boolean {
-    return Boolean(this.baseUrl && this.apiKey && this.project)
+  /** True when the env config indicates Lightbase should be used. */
+  static isEnabled(): boolean {
+    return Boolean(
+      process.env.LIGHTBASE_API_KEY &&
+        process.env.LIGHTBASE_BASE_URL &&
+        process.env.LIGHTBASE_PROJECT,
+    )
   }
 
-  private authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-    return {
+  /** Build a client from the current process env. Returns null if disabled. */
+  static fromEnv(): LightbaseClient | null {
+    if (!LightbaseClient.isEnabled()) return null
+    return new LightbaseClient({
+      baseUrl: process.env.LIGHTBASE_BASE_URL!,
+      apiKey: process.env.LIGHTBASE_API_KEY!,
+      project: process.env.LIGHTBASE_PROJECT!,
+      tenant: process.env.LIGHTBASE_TENANT ?? "default",
+    })
+  }
+
+  // -----------------------------------------------------------------------
+  // Low-level request helper
+  // -----------------------------------------------------------------------
+
+  private async request<T = unknown>(
+    path: string,
+    init: {
+      method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+      body?: unknown
+      headers?: Record<string, string>
+      searchParams?: Record<string, string | undefined>
+    } = {},
+  ): Promise<T> {
+    const url = new URL(`${this.baseUrl}${path}`)
+    if (init.searchParams) {
+      for (const [k, v] of Object.entries(init.searchParams)) {
+        if (v !== undefined && v !== null) url.searchParams.set(k, v)
+      }
+    }
+    const headers: Record<string, string> = {
       apikey: this.apiKey,
       "x-lightbase-project": this.project,
       "x-lightbase-tenant": this.tenant,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...extra,
+      ...init.headers,
     }
-  }
-
-  private async parseError(res: Response, method: string, path: string): Promise<LightbaseError> {
-    let body: LightbaseErrorBody | null = null
-    let raw: string | null = null
-    try {
-      raw = await res.text()
-      if (raw) {
-        try {
-          body = JSON.parse(raw) as LightbaseErrorBody
-        } catch {
-          // non-JSON error body
-        }
-      }
-    } catch {
-      // ignore
+    if (init.body !== undefined) {
+      headers["Content-Type"] = "application/json"
     }
-
-    const errObj = body?.error
-    const message = errObj?.message || raw || `HTTP ${res.status} on ${method} ${path}`
-    const code = errObj?.code || "internal.error"
-    const domain = errObj?.domain || "internal"
-
-    const base = {
-      code,
-      domain,
-      correlationId: body?.correlationId,
-      details: { ...(errObj?.details || {}), method, path, raw: raw?.slice(0, 500) },
-    }
-
-    switch (res.status) {
-      case 401:
-        return new LightbaseAuthError(message, base.details)
-      case 403:
-        return new LightbaseForbiddenError(message, base.details)
-      case 404:
-        return new LightbaseNotFoundError(message, base.details)
-      case 409:
-        return new LightbaseConflictError(message, base.details)
-      default:
-        return new LightbaseError(message, {
-          status: res.status,
-          ...base,
-        })
-    }
-  }
-
-  private buildUrl(path: string, query?: Record<string, string | undefined>): string {
-    const url = new URL(`${this.baseUrl}${path}`)
-    if (query) {
-      for (const [k, v] of Object.entries(query)) {
-        if (v !== undefined && v !== null && v !== "") {
-          url.searchParams.set(k, v)
-        }
-      }
-    }
-    return url.toString()
-  }
-
-  private async request<T>(
-    method: string,
-    path: string,
-    opts: {
-      query?: Record<string, string | undefined>
-      body?: any
-      extraHeaders?: Record<string, string>
-      raw?: false
-    } = {},
-  ): Promise<T> {
-    const url = this.buildUrl(path, opts.query)
-    const headers = this.authHeaders(opts.extraHeaders || {})
-    const init: RequestInit = {
-      method,
+    const res = await this.fetchImpl(url.toString(), {
+      method: init.method ?? "GET",
       headers,
-    }
-    if (opts.body !== undefined && opts.body !== null) {
-      init.body = typeof opts.body === "string" ? opts.body : JSON.stringify(opts.body)
-    }
-
-    let res: Response
-    try {
-      res = await fetch(url, init)
-    } catch (e) {
-      throw new LightbaseError(`Network error: ${(e as Error).message}`, {
-        status: 0,
-        code: "network.error",
-        domain: "network",
-        details: { method, path, url },
-      })
-    }
-
-    if (!res.ok) {
-      throw await this.parseError(res, method, path)
-    }
-
-    if (res.status === 204) return undefined as T
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    })
     const text = await res.text()
-    if (!text) return undefined as T
-    try {
-      return JSON.parse(text) as T
-    } catch {
-      return text as unknown as T
+    let parsed: any = null
+    if (text) {
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = { raw: text }
+      }
     }
-  }
-
-  // ---- Collections ----
-
-  async listCollections(): Promise<LightbaseCollectionDefinition[]> {
-    const data = await this.request<{ collections?: LightbaseCollectionDefinition[] } | LightbaseCollectionDefinition[]>(
-      "GET",
-      `/api/v1/projects/${this.project}/collections`,
-    )
-    if (Array.isArray(data)) return data
-    return data.collections || []
-  }
-
-  async getCollectionSchema(name: string): Promise<LightbaseCollectionDefinition | null> {
-    try {
-      const data = await this.request<{ collection?: LightbaseCollectionDefinition } | LightbaseCollectionDefinition>(
-        "GET",
-        `/api/v1/projects/${this.project}/collections/${encodeURIComponent(name)}`,
+    if (!res.ok) {
+      const err = parsed?.error
+      if (err) {
+        throw new LightbaseApiError(
+          err.code ?? "http.error",
+          err.message ?? `HTTP ${res.status}`,
+          res.status,
+          err.domain ?? "http",
+          err.details,
+          parsed?.correlationId,
+        )
+      }
+      throw new LightbaseApiError(
+        "http.error",
+        `HTTP ${res.status}: ${text.slice(0, 200)}`,
+        res.status,
+        "http",
       )
-      if ((data as any)?.collection) return (data as any).collection
-      return data as LightbaseCollectionDefinition
+    }
+    return parsed as T
+  }
+
+  // -----------------------------------------------------------------------
+  // Collections — schema management
+  // -----------------------------------------------------------------------
+
+  async listCollections(): Promise<LightbaseCollectionSchema[]> {
+    const res = await this.request<
+      { collections?: LightbaseCollectionSchema[] } | LightbaseCollectionSchema[]
+    >(`/api/v1/projects/${this.project}/collections`)
+    if (Array.isArray(res)) return res
+    return res.collections ?? []
+  }
+
+  async getCollectionSchema(name: string): Promise<LightbaseCollectionSchema | null> {
+    try {
+      const res = await this.request<LightbaseCollectionSchema>(
+        `/api/v1/projects/${this.project}/collections/${name}`,
+      )
+      return res
     } catch (e) {
-      if (e instanceof LightbaseNotFoundError) return null
+      if (e instanceof LightbaseApiError && e.status === 404) return null
       throw e
     }
   }
 
+  // Alias for back-compat.
+  async getCollectionInfo(name: string): Promise<LightbaseCollectionSchema | null> {
+    return this.getCollectionSchema(name)
+  }
+
+  /**
+   * Create a collection. Accepts either a single schema object
+   * ({name, fields, indexes}) or three separate args (name, fields,
+   * indexes) for back-compat with callers in lib/sdk.ts and
+   * scripts/seed-lightbase.ts.
+   */
   async createCollection(
-    name: string,
-    fields: LightbaseFieldDefinition[],
-    indexes?: LightbaseIndexDefinition[],
-  ): Promise<LightbaseCollectionDefinition> {
-    const body: LightbaseCollectionDefinition = {
-      name,
-      fields,
-      ...(indexes && indexes.length > 0 ? { indexes } : {}),
-    }
-    const data = await this.request<{ collection?: LightbaseCollectionDefinition } | LightbaseCollectionDefinition>(
-      "POST",
+    nameOrSchema: string | LightbaseCollectionSchema,
+    fieldsArg?: LightbaseFieldDefinition[],
+    indexesArg?: LightbaseIndexDefinition[],
+  ): Promise<LightbaseCollectionSchema> {
+    const schema: LightbaseCollectionSchema =
+      typeof nameOrSchema === "string"
+        ? {
+            name: nameOrSchema,
+            fields: fieldsArg ?? [],
+            ...(indexesArg && indexesArg.length ? { indexes: indexesArg } : {}),
+          }
+        : nameOrSchema
+    return this.request<LightbaseCollectionSchema>(
       `/api/v1/projects/${this.project}/collections`,
-      { body },
+      { method: "POST", body: schema },
     )
-    if ((data as any)?.collection) return (data as any).collection
-    return data as LightbaseCollectionDefinition
+  }
+
+  async upsertCollection(schema: LightbaseCollectionSchema): Promise<LightbaseCollectionSchema> {
+    const existing = await this.getCollectionSchema(schema.name)
+    if (existing) return existing
+    return this.createCollection(schema)
   }
 
   async deleteCollection(name: string): Promise<void> {
-    await this.request<void>("DELETE", `/api/v1/projects/${this.project}/collections/${encodeURIComponent(name)}`)
+    await this.request(`/api/v1/projects/${this.project}/collections/${name}`, {
+      method: "DELETE",
+    })
   }
 
-  // ---- Documents ----
+  // -----------------------------------------------------------------------
+  // Documents — CRUD
+  //
+  // NOTE: `getCollection(name)` is the "list documents" method that
+  // universal-sdk.ts and the rest of the app expect (returning T[]).
+  // For schema introspection use `getCollectionSchema(name)` instead.
+  // -----------------------------------------------------------------------
 
-  async getCollection<T = any>(name: string): Promise<T[]> {
-    const data = await this.request<LightbaseQueryResponse<T> | T[]>(
-      "GET",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(name)}/docs`,
-      { query: { limit: "1000" } },
+  /**
+   * List documents in `collection`. Returns up to `limit` rows
+   * (default 1000). This is the method callers use to read everything
+   * in a collection.
+   */
+  async getCollection<T = Record<string, unknown>>(
+    collection: string,
+    opts: { limit?: number; sort?: string; filter?: LightbaseFilterExpr } = {},
+  ): Promise<(T & { id: string })[]> {
+    const res = await this.query<T>(collection, {
+      limit: opts.limit ?? 1000,
+      sort: opts.sort,
+      filter: opts.filter,
+    })
+    return (res.data ?? []) as (T & { id: string })[]
+  }
+
+  async insert<T = Record<string, unknown>>(
+    collection: string,
+    doc: T,
+  ): Promise<T & { id: string }> {
+    const res = await this.request<LightbaseDocument<T>>(
+      `/api/v1/projects/${this.project}/collections/${collection}`,
+      { method: "POST", body: doc },
     )
-    if (Array.isArray(data)) return data
-    return (data as LightbaseQueryResponse<T>).data || []
+    return res.document as T & { id: string }
   }
 
-  async getOne<T = any>(collection: string, id: string): Promise<T | null> {
+  async getOne<T = Record<string, unknown>>(
+    collection: string,
+    id: string,
+  ): Promise<(T & { id: string }) | null> {
     try {
-      const data = await this.request<{ document?: T } | T>(
-        "GET",
-        `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      const res = await this.request<LightbaseDocument<T>>(
+        `/api/v1/projects/${this.project}/collections/${collection}/${id}`,
       )
-      if ((data as any)?.document) return (data as any).document
-      return data as T
+      return res.document as T & { id: string }
     } catch (e) {
-      if (e instanceof LightbaseNotFoundError) return null
+      if (e instanceof LightbaseApiError && e.status === 404) return null
       throw e
     }
   }
 
-  async insert<T = any>(collection: string, doc: any): Promise<T> {
-    const data = await this.request<{ document?: T } | T>(
-      "POST",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}`,
-      { body: doc },
-    )
-    if ((data as any)?.document) return (data as any).document
-    return data as T
-  }
-
-  async bulkInsert<T = any>(collection: string, docs: any[]): Promise<T[]> {
-    // Prefer the seed endpoint with dedup on "id" for idempotency.
-    if (docs.length === 0) return []
-    try {
-      const seedBody = {
-        collection,
-        documents: docs,
-        dedupOn: ["id"],
-      }
-      const seedRes = await this.request<LightbaseSeedResponse>(
-        "POST",
-        `/api/v1/projects/${this.project}/seed`,
-        { body: seedBody },
+  async update<T = Record<string, unknown>>(
+    collection: string,
+    id: string,
+    patch: Partial<T>,
+  ): Promise<T & { id: string }> {
+    // Fetch current revision for optimistic concurrency.
+    const current = await this.getOne<T & { _revision?: number }>(collection, id)
+    if (!current) {
+      throw new LightbaseApiError(
+        "not_found",
+        `Document ${id} not found in ${collection}`,
+        404,
+        "client",
       )
-      if (seedRes && typeof seedRes.inserted === "number") {
-        // Seed doesn't return full documents; re-query to get them.
-        const inserted = await this.getCollection<T>(collection)
-        return inserted
-      }
-    } catch (e) {
-      // Fallback to per-doc insert
-      if (!(e instanceof LightbaseError) || (e as LightbaseError).status !== 404) {
-        // For non-404 errors, fall through to per-doc insert
-      }
     }
-
-    const out: T[] = []
-    for (const d of docs) {
-      try {
-        out.push(await this.insert<T>(collection, d))
-      } catch (e) {
-        if (e instanceof LightbaseConflictError) {
-          // Skip duplicates during per-doc fallback
-          continue
-        }
-        throw e
-      }
-    }
-    return out
-  }
-
-  async update<T = any>(collection: string, id: string, patch: any): Promise<T> {
-    // Fetch first to get _revision for If-Match optimistic concurrency.
-    let revision: number | undefined
-    const existing = await this.getOne<any>(collection, id)
-    if (existing && typeof existing._revision === "number") {
-      revision = existing._revision
-    }
-
-    const headers: Record<string, string> = {}
-    if (revision !== undefined) {
-      headers["If-Match"] = String(revision)
-    }
-
-    const data = await this.request<{ document?: T } | T>(
-      "PATCH",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
-      { body: patch, extraHeaders: headers },
+    const res = await this.request<LightbaseDocument<T>>(
+      `/api/v1/projects/${this.project}/collections/${collection}/${id}`,
+      {
+        method: "PATCH",
+        body: patch,
+        headers: { "If-Match": String(current._revision ?? 1) },
+      },
     )
-    if ((data as any)?.document) return (data as any).document
-    return data as T
+    return res.document as T & { id: string }
   }
 
   async delete(collection: string, id: string): Promise<void> {
-    await this.request<void>(
-      "DELETE",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
-    )
+    await this.request(`/api/v1/projects/${this.project}/collections/${collection}/${id}`, {
+      method: "DELETE",
+    })
   }
 
-  async query<T = any>(
+  async query<T = Record<string, unknown>>(
     collection: string,
-    params: LightbaseQueryParams = {},
-  ): Promise<LightbaseQueryResponse<T>> {
-    const query: Record<string, string | undefined> = {}
-    if (params.filter) query.filter = JSON.stringify(params.filter)
-    if (params.sort) query.sort = params.sort
-    if (params.limit !== undefined) query.limit = String(params.limit)
-    if (params.cursor) query.cursor = JSON.stringify(params.cursor)
-    if (params.after) query.after = params.after
-    if (params.count) query.count = "true"
-    if (params.select) query.select = params.select
-
-    const data = await this.request<LightbaseQueryResponse<T> | T[]>(
-      "GET",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/docs`,
-      { query },
+    opts: LightbaseQueryOptions = {},
+  ): Promise<LightbaseQueryResult<T>> {
+    const searchParams: Record<string, string | undefined> = {}
+    if (opts.filter) searchParams.filter = JSON.stringify(opts.filter)
+    if (opts.sort) searchParams.sort = opts.sort
+    if (opts.limit !== undefined) searchParams.limit = String(opts.limit)
+    if (opts.cursor) searchParams.cursor = JSON.stringify(opts.cursor)
+    if (opts.after) searchParams.after = opts.after
+    if (opts.count) searchParams.count = "true"
+    if (opts.select) searchParams.select = opts.select
+    return this.request<LightbaseQueryResult<T>>(
+      `/api/v1/projects/${this.project}/collections/${collection}/docs`,
+      { searchParams },
     )
-    if (Array.isArray(data)) {
-      return { data, hasMore: false, count: data.length }
-    }
-    return data as LightbaseQueryResponse<T>
-  }
-
-  async search<T = any>(collection: string, query: string, limit: number = 25): Promise<LightbaseSearchResponse<T>> {
-    const data = await this.request<LightbaseSearchResponse<T>>(
-      "POST",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/search`,
-      { body: { query, limit } },
-    )
-    return data
-  }
-
-  async upsert<T = any>(collection: string, filter: LightbaseFilterExpr, document: any): Promise<LightbaseUpsertResponse<T>> {
-    const data = await this.request<LightbaseUpsertResponse<T>>(
-      "PUT",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/upsert`,
-      { body: { filter, document } },
-    )
-    return data
   }
 
   async count(collection: string, filter?: LightbaseFilterExpr): Promise<number> {
-    const query: Record<string, string | undefined> = {
-      count: "true",
-      limit: "1",
-    }
-    if (filter) query.filter = JSON.stringify(filter)
-    const data = await this.request<LightbaseQueryResponse>(
-      "GET",
-      `/api/v1/projects/${this.project}/collections/${encodeURIComponent(collection)}/docs`,
-      { query },
+    const res = await this.query<unknown>(collection, { filter, limit: 1, count: true })
+    return res.count ?? res.total ?? 0
+  }
+
+  async search<T = Record<string, unknown>>(
+    collection: string,
+    query: string,
+    limit = 25,
+  ): Promise<T[]> {
+    const res = await this.request<{ data: T[]; total?: number }>(
+      `/api/v1/projects/${this.project}/collections/${collection}/search`,
+      { method: "POST", body: { query, limit } },
     )
-    if (typeof data.count === "number") return data.count
-    if (typeof data.total === "number") return data.total
-    if (Array.isArray(data)) return data.length
-    return (data.data || []).length
+    return res.data ?? []
   }
 
-  // ---- Bulk Operations ----
-
-  async bulk(
-    ops: {
-      inserts?: { collection: string; document: any }[]
-      updates?: { collection: string; id: string; patch: any }[]
-      deletes?: { collection: string; id: string }[]
-    },
-  ): Promise<LightbaseBulkResponse> {
-    const data = await this.request<LightbaseBulkResponse>(
-      "POST",
-      `/api/v1/projects/${this.project}/bulk`,
-      { body: ops },
+  async upsert<T = Record<string, unknown>>(
+    collection: string,
+    filter: LightbaseFilterExpr,
+    document: T,
+  ): Promise<{ document: T & { id: string }; created: boolean }> {
+    const res = await this.request<{ document: T & { id: string }; created: boolean }>(
+      `/api/v1/projects/${this.project}/collections/${collection}/upsert`,
+      { method: "PUT", body: { filter, document } },
     )
-    return data
+    return res
   }
 
-  // ---- Health ----
+  // -----------------------------------------------------------------------
+  // Bulk / Seed
+  //
+  // `bulkInsert` inserts one document at a time in parallel so the
+  // returned array contains the actual inserted rows (the /seed
+  // endpoint only returns counts, which is not enough for callers
+  // that need the new ids).
+  // -----------------------------------------------------------------------
 
-  async health(): Promise<{ status: string }> {
-    const data = await this.request<{ status: string }>("GET", "/health")
-    return data
+  async bulkInsert<T = Record<string, unknown>>(
+    collection: string,
+    docs: T[],
+  ): Promise<(T & { id: string })[]> {
+    if (docs.length === 0) return []
+    const results: Array<(T & { id: string }) | null> = await Promise.all(
+      docs.map((d) =>
+        this.insert<T>(collection, d).catch((e) => {
+          console.error(`[LightbaseClient.bulkInsert ${collection}]`, e)
+          return null as (T & { id: string }) | null
+        }),
+      ),
+    )
+    return results.filter((r): r is T & { id: string } => r !== null)
+  }
+
+  /** Seed endpoint — bulk insert with dedup. Returns counts only. */
+  async seed<T = Record<string, unknown>>(
+    collection: string,
+    documents: T[],
+    dedupOn: string[] = ["id"],
+  ): Promise<{ inserted: number; skipped: number; errors: string[] }> {
+    const res = await this.request<{ inserted: number; skipped: number; errors: string[] }>(
+      `/api/v1/projects/${this.project}/seed`,
+      { method: "POST", body: { collection, documents, dedupOn } },
+    )
+    return res
+  }
+
+  // -----------------------------------------------------------------------
+  // Aggregations
+  // -----------------------------------------------------------------------
+
+  async aggregate<T = Record<string, unknown>>(
+    collection: string,
+    body: { groupBy?: string[]; aggregations: Array<{ op: string; field?: string; as: string }> },
+  ): Promise<T[]> {
+    const res = await this.request<{ results: T[] }>(
+      `/api/v1/projects/${this.project}/collections/${collection}/aggregate`,
+      { method: "POST", body },
+    )
+    return res.results ?? []
+  }
+
+  // -----------------------------------------------------------------------
+  // Health (unauthenticated)
+  // -----------------------------------------------------------------------
+
+  async health(): Promise<{ status: string; version?: string; timestamp?: string }> {
+    return this.request<{ status: string; version?: string; timestamp?: string }>(`/health`)
   }
 }
 
-// ---- Singleton initialization from env vars ----
-
-function buildClientFromEnv(): LightbaseClient | null {
-  const apiKey = process.env.LIGHTBASE_API_KEY
-  const baseUrl = process.env.LIGHTBASE_BASE_URL
-  const project = process.env.LIGHTBASE_PROJECT
-  const tenant = process.env.LIGHTBASE_TENANT
-
-  if (!apiKey || !baseUrl || !project) {
-    return null
-  }
-  return new LightbaseClient({ baseUrl, apiKey, project, tenant })
-}
-
-export const lightbaseClient: LightbaseClient | null = buildClientFromEnv()
-
-export function isLightbaseEnabled(): boolean {
-  return lightbaseClient !== null
-}
+/**
+ * Singleton — initialised from process.env at module load. Null when
+ * LIGHTBASE_API_KEY is unset, so callers can branch to the legacy
+ * GitHub JSON backend for local dev.
+ */
+export const lightbaseClient: LightbaseClient | null = LightbaseClient.fromEnv()
 
 export default LightbaseClient
