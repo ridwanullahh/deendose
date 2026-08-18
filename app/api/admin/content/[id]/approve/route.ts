@@ -8,17 +8,18 @@ export const dynamic = "force-dynamic"
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await ctx.params
   const ip = getClientIp(request)
   const claims = getClaimsFromRequest(request)
   const userId = claims?.sub || "admin"
   try {
-    await approveContent(params.id)
+    await approveContent(id)
     await writeAuditLog({
       action: "admin.content_approve",
       userId,
-      data: { contentId: params.id },
+      data: { contentId: id },
       ip,
     })
     return NextResponse.json({ success: true })

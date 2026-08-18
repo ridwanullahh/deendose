@@ -52,6 +52,7 @@ export async function signJwt(
   if (!secret) throw new Error("JWT secret is not configured")
   const now = Math.floor(Date.now() / 1000)
   const payload: JwtClaims = {
+    sub: claims.sub || "system",
     iat: now,
     exp: now + ttlSeconds,
     ...claims,

@@ -521,7 +521,7 @@ async function logValidation(verse: QuranVerse, validationChain: ValidationResul
       rejectedAgents: validationChain.filter(v => !v.approved).length
     }
 
-    const logs = await sdk.get('ai-validation-logs').catch(() => [])
+    const logs = await sdk.get<any>('ai-validation-logs').catch(() => [] as any[])
     logs.push(logEntry)
     
     if (logs.length > 1000) {

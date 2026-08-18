@@ -48,7 +48,7 @@ export default function PostEditor({ onPostSaved, editingPost }: PostEditorProps
         category: formData.category,
         tags: formData.tags
           .split(",")
-          .map((tag) => tag.trim())
+          .map((tag: string) => tag.trim())
           .filter(Boolean),
         scheduledFor: formData.scheduledFor || new Date().toISOString(),
         publishedAt: formData.status === "published" ? new Date().toISOString() : undefined,

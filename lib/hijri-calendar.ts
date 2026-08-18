@@ -82,8 +82,8 @@ function gregorianToJulian(date: Date): number {
   )
 }
 
-export function getCurrentHijriDate(): HijriDate {
-  return gregorianToHijri(new Date())
+export function getCurrentHijriDate(date?: Date): HijriDate {
+  return gregorianToHijri(date || new Date())
 }
 
 export function getHijriDateString(date: Date, arabic = false): string {

@@ -9,8 +9,8 @@ import CategoryFilter from "@/components/category-filter"
 import LoadingSpinner from "@/components/loading-spinner"
 
 export default function ArchivePage() {
-  const [posts, setPosts] = useState([])
-  const [categories, setCategories] = useState([])
+  const [posts, setPosts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")

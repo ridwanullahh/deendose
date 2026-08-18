@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { getSetting, setSetting } from "@/lib/sdk"
 
 export default function SocialMediaSettings() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<Record<string, Record<string, string>>>({
     facebook: {
       appId: "",
       appSecret: "",
@@ -78,16 +78,16 @@ export default function SocialMediaSettings() {
   }
 
   const platforms = [
-    { id: "facebook", name: "Facebook", icon: "📘", color: "blue" },
-    { id: "twitter", name: "Twitter", icon: "🐦", color: "sky" },
-    { id: "instagram", name: "Instagram", icon: "📷", color: "pink" },
-    { id: "telegram", name: "Telegram", icon: "✈️", color: "blue" },
-    { id: "whatsapp", name: "WhatsApp", icon: "💬", color: "green" },
-    { id: "linkedin", name: "LinkedIn", icon: "💼", color: "blue" },
+    { id: "facebook", name: "Facebook", color: "blue" },
+    { id: "twitter", name: "Twitter", color: "sky" },
+    { id: "instagram", name: "Instagram", color: "pink" },
+    { id: "telegram", name: "Telegram", color: "blue" },
+    { id: "whatsapp", name: "WhatsApp", color: "green" },
+    { id: "linkedin", name: "LinkedIn", color: "blue" },
   ]
 
   const renderPlatformSettings = (platformId: string) => {
-    const platform = settings[platformId as keyof typeof settings]
+    const platform = settings[platformId] || {}
 
     switch (platformId) {
       case "facebook":
@@ -239,7 +239,7 @@ export default function SocialMediaSettings() {
                 : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
             }`}
           >
-            <span className="text-lg">{platform.icon}</span>
+            <span className="text-lg">{platform.name.charAt(0)}</span>
             <span>{platform.name}</span>
           </button>
         ))}
