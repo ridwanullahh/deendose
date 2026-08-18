@@ -12,7 +12,7 @@
     "test:coverage": "vitest --coverage",
     "seed:lightbase": "tsx scripts/seed-lightbase.ts",
     "build:pages": "npx @cloudflare/next-on-pages",
-    "deploy": "npm run build:pages && wrangler pages deploy .vercel/output --project-name=deendose"
+    "deploy": "npm run build:pages && wrangler pages deploy .vercel/output/static --project-name=deendose --branch=main --commit-dirty=true"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
